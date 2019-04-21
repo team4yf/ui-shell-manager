@@ -167,32 +167,31 @@ class Main extends Component {
   };
 
   handleRun = async (name) => {
-    const sure = await swal({
-      title: "Are you sure?",
-      text: "Are you sure that you want to execute this script?",
-      icon: "warning",
-      dangerMode: true,
-    });
-    if(!sure){ return; }
-    const { outputs } = this.state;
-    this.setState({
-      console: true,
-      loading: true,
-    })
-    new Func('scripts.run')
-      .invoke({
-        script: name,
+    // enter password for auth
+    try {
+      const value = await swal("Type password to run:", {
+        content: "input",
+        icon: "warning",
+        dangerMode: true,
+      });
+      await new Func('scripts.auth').invoke({ password: value })
+
+      const { outputs } = this.state;
+      this.setState({
+        console: true,
+        loading: true,
       })
-      .then(rsp => {
-        outputs.unshift(rsp.data)
-        this.setState({ outputs, loading: false })
-      })
-      .catch(error => {
-        console.error(error);
-        this.setState({ loading: false })
-        swal("Oops!", "Something went wrong!", "error");
-      })
-      
+      const rsp = await new Func('scripts.run')
+        .invoke({
+          script: name,
+        });
+      outputs.unshift(rsp.data)
+      this.setState({ outputs, loading: false })
+    } catch (error) {
+      console.error(error);
+      this.setState({ loading: false })
+      swal("Oops!", error.message || "Something went wrong!" , "error");
+    }
   }
 
   handleClean = () => {
@@ -216,32 +215,27 @@ class Main extends Component {
       console.error(error);
       swal("Oops!", "Something went wrong!", "error");
     }
-    
   }
 
   handleDelete = async(name) => {
-    const willDelete = await swal({
-      title: "Are you sure?",
-      text: "Are you sure that you want to delete this file?",
-      icon: "warning",
-      dangerMode: true,
-    });
-    if(willDelete){
-      new Func('scripts.delete')
+    try {
+      const value = await swal("Type password to delete:", {
+        content: "input",
+        icon: "warning",
+        dangerMode: true,
+      });
+      await new Func('scripts.auth').invoke({ password: value })
+
+      await new Func('scripts.delete')
         .invoke({
           script: name
         })
-        .then(rsp =>{
-          const { scripts } = this.state;
-          delete scripts[name];
-          this.setState( { scripts })
-        })
-        .catch(error => {
-          console.error(error);
-          swal("Oops!", "Something went wrong!", "error");
-        })
+      const { scripts } = this.state;
+      delete scripts[name];
+      this.setState( { scripts })
+    } catch (error) {
+      swal("Oops!", error.message || "Something went wrong!" , "error");
     }
-    
   }
   render() {
     const { classes } = this.props;
